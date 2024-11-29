@@ -1,8 +1,7 @@
 <!-- badges: start -->
-HEAD
-[GitHub](https://img.shields.io/github/license/inbo/Vitaliteit_grove_den)
-[GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/inbo/Vitaliteit_grove_den/check-project)
-[GitHub repo size](https://img.shields.io/github/repo-size/inbo/Vitaliteit_grove_den)
+[GitHub](https://img.shields.io/github/license/inbo/Vitaliteit-grove-den)
+[GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/inbo/Vitaliteit-grove-den/check-project)
+[GitHub repo size](https://img.shields.io/github/repo-size/inbo/Vitaliteit-grove-den)
 cf80aad37328aaf0b13c34a8be0673908386ed33
 <!-- badges: end -->
 
