@@ -1,7 +1,9 @@
 <!-- badges: start -->
-![GitHub](https://img.shields.io/github/license/y/Vitaliteit-grove-den)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/y/Vitaliteit-grove-den/check-project)
-![GitHub repo size](https://img.shields.io/github/repo-size/y/Vitaliteit-grove-den)
+HEAD
+[GitHub](https://img.shields.io/github/license/inbo/Vitaliteit_grove_den)
+[GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/inbo/Vitaliteit_grove_den/check-project)
+[GitHub repo size](https://img.shields.io/github/repo-size/inbo/Vitaliteit_grove_den)
+cf80aad37328aaf0b13c34a8be0673908386ed33
 <!-- badges: end -->
 
 # Vitaliteit Grove Den
@@ -15,7 +17,11 @@ Research Institute for Nature and Forest (INBO)[^cph][^fnd]
 [^cre]: contact person
 [^inbo.be]: Instituut voor Natuur- en Bosonderzoek (INBO)
 
+<<<<<<< HEAD
 **keywords**: remote sensing; grove den; vitaliteit; drones; satellieten; orthofoto's
+=======
+**keywords**: remote sensing; grove den; vitaliteit; drones; satellieten; orthofoto's'
+>>>>>>> cf80aad37328aaf0b13c34a8be0673908386ed33
 
 <!-- community: inbo -->
 
