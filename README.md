@@ -1,7 +1,7 @@
 <!-- badges: start -->
-[GitHub](https://img.shields.io/github/license/inbo/Vitaliteit-grove-den)
-[GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/inbo/Vitaliteit-grove-den/check-project)
-[GitHub repo size](https://img.shields.io/github/repo-size/inbo/Vitaliteit-grove-den)
+![GitHub](https://img.shields.io/github/license/inbo/Vitaliteit-grove-den)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/inbo/Vitaliteit-grove-den/check-project)
+![GitHub repo size](https://img.shields.io/github/repo-size/inbo/Vitaliteit-grove-den)
 <!-- badges: end -->
 
 # Vitaliteit Grove Den
