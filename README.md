@@ -2,7 +2,6 @@
 [GitHub](https://img.shields.io/github/license/inbo/Vitaliteit-grove-den)
 [GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/inbo/Vitaliteit-grove-den/check-project)
 [GitHub repo size](https://img.shields.io/github/repo-size/inbo/Vitaliteit-grove-den)
-cf80aad37328aaf0b13c34a8be0673908386ed33
 <!-- badges: end -->
 
 # Vitaliteit Grove Den
@@ -22,9 +21,7 @@ Research Institute for Nature and Forest (INBO)[^cph][^fnd]
 <!-- community: inbo -->
 
 <!-- description: start -->
-Replace this with a short description of the project.
-It becomes the abstract of the project in the citation information.
-And the project description at https://zenodo.org
+In this project, the vitality status of Pinus sylvestris in Flanders is assessed using drones, orthophotos and satellites
 <!-- description: end -->
 
 Anything below here is visible in the README but not in the citation.
