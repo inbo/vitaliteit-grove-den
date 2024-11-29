@@ -16,11 +16,8 @@ Research Institute for Nature and Forest (INBO)[^cph][^fnd]
 [^cre]: contact person
 [^inbo.be]: Instituut voor Natuur- en Bosonderzoek (INBO)
 
-<<<<<<< HEAD
-**keywords**: remote sensing; grove den; vitaliteit; drones; satellieten; orthofoto's
-=======
+
 **keywords**: remote sensing; grove den; vitaliteit; drones; satellieten; orthofoto's'
->>>>>>> cf80aad37328aaf0b13c34a8be0673908386ed33
 
 <!-- community: inbo -->
 
