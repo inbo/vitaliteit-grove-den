@@ -1,0 +1,116 @@
+---
+title: "Drone analyse voor project Vitaliteit grove den"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Step 1: Get acquainted with drone image boundaries
+
+```{r visualize location of drone images}
+#Load required libraries
+library(sf)
+library(leaflet)
+
+# Read the GeoJSON file
+geojson_file <- "../data/plots.geojson"  # Replace with your file path
+geojson_data <- st_read(geojson_file)
+
+# Fix invalid geometries
+geojson_data <- st_make_valid(geojson_data)
+
+# Transform the CRS to WGS84 (longlat)
+geojson_data_WGS <- st_transform(geojson_data, crs = 4326)
+
+# Calculate centroids of the polygons
+centroids <- st_centroid(geojson_data_WGS)
+
+# Create an interactive map
+leaflet() %>%
+  addTiles() %>%  # Add default base map tiles
+  # Add polygons to the map
+  addPolygons(
+    data = geojson_data_WGS,
+    color = "blue",  # Polygon border color
+    fillColor = "cyan",  # Polygon fill color
+    weight = 1,  # Border thickness
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.5,  # Fill opacity
+    popup = ~as.character(naam)  # Replace 'NAME' with an attribute column
+  ) %>%
+  # Add centroids as points
+  addCircleMarkers(
+    data = centroids,
+    radius = 4,  # Size of the markers
+    color = "red",  # Marker border color
+    fillColor = "yellow",  # Marker fill color
+    fillOpacity = 0.8,  # Marker fill opacity
+    popup = ~as.character(naam)  # Replace 'NAME' with an attribute column
+  )
+```
+
+```{r calculate statistics of drone flights}
+# Calculate area in square meters, then convert to hectares
+geojson_data$area_ha <- as.numeric(st_area(geojson_data)) / 10000  # Convert to hectares
+
+# Summary statistics
+num_plots <- nrow(geojson_data)
+min_size <- min(geojson_data$area_ha)
+max_size <- max(geojson_data$area_ha)
+avg_size <- mean(geojson_data$area_ha)
+
+# Store in a list for easy display
+# Create summary statistics
+summary_stats <- data.frame(
+  Metric = c("Number of Plots", "Minimum Size (ha)", "Maximum Size (ha)", "Average Size (ha)"),
+  Value = c(num_plots, min_size, max_size, avg_size)
+)
+
+```
+```{r visualize the size of the plots}
+library(knitr)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+
+# Summary statistics
+summary_stats <- data.frame(
+  Metric = c("Number of Plots", "Minimum Size (ha)", "Maximum Size (ha)", "Average Size (ha)"),
+  Value = c(
+    formatC(as.integer(nrow(geojson_data)), format = "d"),  # Force integer display
+    round(min(geojson_data$area_ha), 2),  # Round for better readability
+    round(max(geojson_data$area_ha), 2),  # Round for better readability
+    round(mean(geojson_data$area_ha), 2)  # Round for better readability
+  )
+)
+
+# Create a histogram of the plot size
+hist_plot <- ggplot(geojson_data, aes(x = area_ha)) +
+  geom_histogram(bins = 10, fill = "lightgrey", color = "black") +
+  labs(
+    x = "Plot Size (ha)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+# Create table of summary statistics without row numbers
+table_plot <- tableGrob(
+  summary_stats,
+  rows = NULL  # Removes row numbers
+)
+
+# Display histogram and summary statistics side by side
+grid.arrange(
+  hist_plot, table_plot,
+  ncol = 2,  # Side-by-side layout
+  widths = c(2, 1),  # Adjust relative width: 2/3 for histogram, 1/3 for table
+  top = textGrob("Plot Size Distribution and Summary Statistics", gp = gpar(fontsize = 14))
+)
+```
+
+
+# Step 2: Visualize actual drone images
+```{r}
+
+```
+
