@@ -3,60 +3,109 @@ title: "Orthophoto analysis"
 output: html_notebook
 ---
 
-```{r get orthophotos through WMTS}
-library(xml2)
+```{r match drone plots with the correct orthophoto tiles}
+library(terra)
+library(sf)
 
-# Your WMTS GetCapabilities URL
-wmts_url <- "https://geo.api.vlaanderen.be/omz/wmts?request=getcapabilities&service=wmts&version=1.0.0"
+# Load the GeoJSON file of the drone plot outlines
+drone_outlines <- st_read("../data/plots.geojson")
+print(drone_outlines)
 
-# Fetch the WMTS capabilities XML
-wmts_capabilities <- read_xml(wmts_url)
+# Load the tiling shapefile (kaartbladen NGI)
+tile_shapefile <- st_read("../data/KaartbladenNGI/Kbl.shp")
 
-# Parse information from the XML
-subnodes <- xml_children(wmts_capabilities)
+# Add the "VL_" prefix to the CODE column
+tile_shapefile$TileName <- paste0("OMZCIR21VL_", sprintf("%02d", as.integer(tile_shapefile$CODE)))
 
-# get into the Contents part of the XML
-contents_node <- subnodes[[4]]
+# Ensure both datasets have the same CRS
+drone_outlines <- st_transform(drone_outlines, st_crs(tile_shapefile))
 
-# Get all <Layer> nodes under <Contents>
-layers <- xml_children(contents_node)
+# Spatial join to find intersections
+matched_tiles <- st_join(drone_outlines, tile_shapefile, left = FALSE)
 
-# Loop through each <Layer> and extract information
-layers_info <- lapply(layers, function(layer_node) {
-  title <- xml_text(xml_find_first(layer_node, ".//ows:Title"))
-  identifier <- xml_text(xml_find_first(layer_node, ".//ows:Identifier"))
-  
-  # Bounding box
-  bbox_lower <- xml_text(xml_find_first(layer_node, ".//ows:LowerCorner"))
-  bbox_upper <- xml_text(xml_find_first(layer_node, ".//ows:UpperCorner"))
-  
-  # Format
-  format <- xml_text(xml_find_first(layer_node, ".//*[local-name()='Format']"))
-  
-  # Tile matrix sets
-  tile_matrix_sets <- paste(xml_text(xml_find_all(layer_node, ".//*[local-name()='TileMatrixSet']")), collapse = ", ")
-  
-  # Return as a list
-  data.frame(
-    Title = title,
-    Identifier = identifier,
-    BoundingBoxLower = bbox_lower,
-    BoundingBoxUpper = bbox_upper,
-    Format = format,
-    TileMatrixSets = tile_matrix_sets,
-    stringsAsFactors = FALSE
-  )
-})
+# Inspect the result
+print(matched_tiles)
 
-# Combine all layer data frames into one
-layers_df <- do.call(rbind, layers_info)
 
-# Print the resulting data frame
-print(layers_df)
+# General folder path for orthos (GIS schijf INBO)
+ortho_folder <- "Z:/Vlaanderen/Referentie/Orthofoto/Orthofoto_zomer2021_CIR"
+## List ortho files (tiles)
+ortho_files <- list.files(ortho_folder, pattern = "\\.jp2$", full.names = TRUE)
 
+# Extract tile names from raster filenames
+ortho_data <- data.frame(
+  TileName = gsub("\\.jp2", "\\1", basename(ortho_files)),
+  RasterFile = ortho_files
+)
+
+# Merge raster file paths with the matched tiles
+matched_tiles <- merge(matched_tiles, ortho_data, by = "TileName", all.x = TRUE)
+
+print(matched_tiles)
 ```
-```{r get forest polygons from WMTS}
-
-
+```{r extract orthophoto parts overlapping the drone plots}
+# Loop through each unique drone polygon
+for (drone_id in unique(matched_tiles$naam)) {
+  # Subset the current drone polygon
+  drone_geom <- matched_tiles[matched_tiles$naam == drone_id, ]
+  print(drone_id)
+  
+    # Add a 10-meter buffer around the polygon
+  drone_geom <- st_buffer(drone_geom, dist = 10)
+  
+  
+  # Find all raster tiles corresponding to this drone polygon
+  tile_files <- unique(drone_geom$RasterFile)
+  (print(tile_files))
+  # Initialize a list to store clipped rasters
+  clipped_parts <- list()
+  
+  # Loop through the corresponding raster tiles
+  for (tile_file in tile_files) {
+    # Check if the raster file exists
+    if (!file.exists(tile_file)) {
+      cat("Raster file not found:", tile_file, "\n")
+      next
+    }
+    
+    # Load the raster
+    raster <- rast(tile_file)
+    
+    # Clip and mask the raster to the drone polygon
+    print('starting clip')
+    # Reproject the vector to match the raster
+    crs_raster <- crs(raster)
+    drone_geom <- st_transform(drone_geom, crs_raster)
+    clipped_raster <- crop(raster, vect(drone_geom))
+    masked_raster <- mask(clipped_raster, vect(drone_geom))
+    
+    # Add to the list of clipped parts
+    clipped_parts <- append(clipped_parts, list(masked_raster))
+  }
+  print('clipping done')
+  print('starting merge')
+  # Merge all clipped parts if there are multiple tiles
+  if (length(clipped_parts) > 1) {
+    merged_raster <- do.call(merge, clipped_parts)
+  } else if (length(clipped_parts) == 1) {
+    merged_raster <- clipped_parts[[1]]
+  } else {
+    cat("No valid raster data for Drone ID:", drone_id, "\n")
+    next
+  }
+  print('merge done')
+  # Define the output file name
+  output_file <- paste0("../output/ortho_CIR/ortho_CIR_", drone_id, "_10mbuf.tif")
+  # Ensure the output directory exists
+  if (!dir.exists("../output/ortho_CIR")) {
+    dir.create("../output/ortho_CIR", recursive = TRUE)
+  }
+  print('starting save raster')
+  # Save the merged raster
+  writeRaster(merged_raster, output_file, overwrite = TRUE)
+  print('save raster done')
+  # Print status
+  cat("Saved merged raster for Drone ID:", drone_id, "to", output_file, "\n")
+}
 ```
 
