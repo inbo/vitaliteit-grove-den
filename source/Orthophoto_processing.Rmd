@@ -1,0 +1,62 @@
+---
+title: "Orthophoto analysis"
+output: html_notebook
+---
+
+```{r get orthophotos through WMTS}
+library(xml2)
+
+# Your WMTS GetCapabilities URL
+wmts_url <- "https://geo.api.vlaanderen.be/omz/wmts?request=getcapabilities&service=wmts&version=1.0.0"
+
+# Fetch the WMTS capabilities XML
+wmts_capabilities <- read_xml(wmts_url)
+
+# Parse information from the XML
+subnodes <- xml_children(wmts_capabilities)
+
+# get into the Contents part of the XML
+contents_node <- subnodes[[4]]
+
+# Get all <Layer> nodes under <Contents>
+layers <- xml_children(contents_node)
+
+# Loop through each <Layer> and extract information
+layers_info <- lapply(layers, function(layer_node) {
+  title <- xml_text(xml_find_first(layer_node, ".//ows:Title"))
+  identifier <- xml_text(xml_find_first(layer_node, ".//ows:Identifier"))
+  
+  # Bounding box
+  bbox_lower <- xml_text(xml_find_first(layer_node, ".//ows:LowerCorner"))
+  bbox_upper <- xml_text(xml_find_first(layer_node, ".//ows:UpperCorner"))
+  
+  # Format
+  format <- xml_text(xml_find_first(layer_node, ".//*[local-name()='Format']"))
+  
+  # Tile matrix sets
+  tile_matrix_sets <- paste(xml_text(xml_find_all(layer_node, ".//*[local-name()='TileMatrixSet']")), collapse = ", ")
+  
+  # Return as a list
+  data.frame(
+    Title = title,
+    Identifier = identifier,
+    BoundingBoxLower = bbox_lower,
+    BoundingBoxUpper = bbox_upper,
+    Format = format,
+    TileMatrixSets = tile_matrix_sets,
+    stringsAsFactors = FALSE
+  )
+})
+
+# Combine all layer data frames into one
+layers_df <- do.call(rbind, layers_info)
+
+# Print the resulting data frame
+print(layers_df)
+
+```
+```{r get forest polygons from WMTS}
+
+
+```
+
