@@ -1,0 +1,40 @@
+{
+  "access_right": "open",
+  "title": "Vitaliteit Grove Den",
+  "description": "<p>In this project, the vitality status of Pinus sylvestris in Flanders is assessed using drones, orthophotos and satellites<\/p>",
+  "keywords": [
+    "remote sensing",
+    "grove den",
+    "vitaliteit",
+    "drones",
+    "satellieten",
+    "orthofoto's'"
+  ],
+  "upload_type": "software",
+  "license": "CC-BY-4.0",
+  "language": "eng",
+  "contributors": [
+    {
+      "name": "Heremans, Stien",
+      "affiliation": "Instituut voor Natuur- en Bosonderzoek (INBO)",
+      "orcid": "0000-0002-5356-1093",
+      "type": "contactperson"
+    },
+    {
+      "name": "Research Institute for Nature and Forest (INBO)",
+      "type": "rightsholder"
+    }
+  ],
+  "creators": [
+    {
+      "name": "Heremans, Stien",
+      "affiliation": "Instituut voor Natuur- en Bosonderzoek (INBO)",
+      "orcid": "0000-0002-5356-1093"
+    }
+  ],
+  "communities": [
+    {
+      "identifier": "inbo"
+    }
+  ]
+}

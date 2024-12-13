@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it using these metadata.
+title: "Vitaliteit Grove Den"
+authors:
+- given-names: Stien
+  family-names: Heremans
+  affiliation: Instituut voor Natuur- en Bosonderzoek (INBO)
+  orcid: 0000-0002-5356-1093
+keywords:
+- remote sensing
+- grove den
+- vitaliteit
+- drones
+- satellieten
+- orthofoto's'
+contact:
+- given-names: Stien
+  family-names: Heremans
+  affiliation: Instituut voor Natuur- en Bosonderzoek (INBO)
+  orcid: 0000-0002-5356-1093
+doi: ~
+license: CC-BY-4.0
+repository-code: https://github.com/inbo/Vitaliteit-grove-den/
+type: software
+abstract: "In this project, the vitality status of Pinus sylvestris in Flanders is
+  assessed using drones, orthophotos and satellites"
