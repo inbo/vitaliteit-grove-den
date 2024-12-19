@@ -1,0 +1,9 @@
+---
+title: "Coregistration drone and orthophoto images"
+output: html_notebook
+---
+```{r coregister}
+
+
+```
+
