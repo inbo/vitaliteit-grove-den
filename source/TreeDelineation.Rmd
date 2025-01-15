@@ -5,20 +5,49 @@ output: html_notebook
 ```{r}
 library(terra) # For raster processing
 
-# Load DSM and DTM
-dsm_drone <- rast("E:/Thesis Thomas/DHT/DEM update/m_geclipt_DEM Dilsen 1.tif")
-dtm <- rast("Z:/Vlaanderen/Hoogte/DHMVII/DHMVIIDTMRAS1m.tif")
+# Define file paths
+output_dir <- "../output"
 
-# Check if CRS match
-identical(crs(dsm_drone), crs(dtm))
-```
+# Ensure output directories exist
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "DTM"))) {
+  dir.create(file.path(output_dir, "DTM"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "DSM"))) {
+  dir.create(file.path(output_dir, "DSM"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "CHM"))) {
+  dir.create(file.path(output_dir, "CHM"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "tree_tops"))) {
+  dir.create(file.path(output_dir, "tree_tops"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "tree_crowns"))) {
+  dir.create(file.path(output_dir, "tree_crowns"), recursive = TRUE)
+}
+
+
+# Load DSM and DTM
+dsm_drone <- rast("D:/Thesis Thomas/DHT/DEM update/m_geclipt_DEM Dilsen 1.tif")
+dtm <- rast("S:/Vlaanderen/Hoogte/DHMVII/DHMVIIDTMRAS1m.tif")
+
+``` 
 
 ```{r}
 # Reproject DSM to match the DTM's CRS
-dsm_reprojected <- project(dsm_drone, crs(dtm), method = "bilinear")
+dsm_reprojected <- project(dsm_drone, crs(dtm), method = "cubic")
+
+# Check if CRS match
+dsm_crs <- crs(dsm_reprojected)
+dtm_crs <- crs(dtm)
+if (!identical(dsm_crs, dtm_crs)) {
+  stop("CRS mismatch: DSM and DTM CRS do not match after reprojection.")
+}
 
 # Save the reprojected DSM
-writeRaster(dsm_reprojected, "../output/dsm Dilsen 1.tif", overwrite = TRUE)
+writeRaster(dsm_reprojected, file.path(output_dir, "DSM", "dsm Dilsen 1.tif"), overwrite = TRUE)
 ```
 
 ```{r}
@@ -26,18 +55,16 @@ writeRaster(dsm_reprojected, "../output/dsm Dilsen 1.tif", overwrite = TRUE)
 dtm_clipped <- crop(dtm, dsm_reprojected)
 
 # Resample DTM to match DSM resolution
-dtm_resampled <- resample(dtm_clipped, dsm_reprojected, method = "bilinear")
+dtm_resampled <- resample(dtm_clipped, dsm_reprojected, method = "cubic")
 
 # Save the clipped and resampled DTM
-writeRaster(dtm_resampled, "../output/dtm Dilsen 1.tif", overwrite = TRUE)
+writeRaster(dtm_resampled, file.path(output_dir, "DTM", "dtm Dilsen 1.tif"), overwrite = TRUE)
 ```
 
 ```{r}
 # CHM calculation
 chm <- dsm_reprojected - dtm_resampled
 
-# Save the CHM
-writeRaster(chm, "../output/chm Dilsen 1.tif", overwrite = TRUE)
 ```
 
 ```{r}
@@ -52,17 +79,28 @@ chm_rescaled <- chm - p1
 chm_rescaled[chm_rescaled < 0] <- 0
 
 # Save the rescaled CHM
-writeRaster(chm_rescaled, "../output/chm_rescaled Dilsen 1.tif.tif", overwrite = TRUE)
+writeRaster(chm_rescaled, file.path(output_dir, "CHM", "chm_rescaled Dilsen 1.tif"), overwrite = TRUE)
 ```
+
 ```{r}
 library(ForestTools)
 library(raster)
 
 chm_raster <- raster(chm_rescaled)
 # Detect tree tops
-tree_tops <- vwf(CHM = chm_raster, winFun = function(x) 0.05 * x + 0.6, minHeight = 2)
+tree_tops <- vwf(CHM = chm_raster, winFun = function(x) 0.1 * x + 1, minHeight = 4)
+
+# Save tree tops
+library(sf)
+
+  # Convert SpatialPointsDataFrame to sf object
+ttops_sf <- st_as_sf(tree_tops)
+
+  # Export as shapefile
+st_write(ttops_sf, file.path(output_dir, "tree_tops", "tree_tops Dilsen 1 v1.shp"), delete_layer = TRUE)  # Set 'delete_layer' to overwrite if needed
 
 # Plot tree tops
+plot.new()  # Ensure a new plot device
 plot(chm_raster, main = "Tree Tops")
 plot(tree_tops, add = TRUE, col = "red", pch = 20)
 
