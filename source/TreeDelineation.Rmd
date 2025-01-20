@@ -30,8 +30,8 @@ if (!dir.exists(file.path(output_dir, "tree_crowns"))) {
 
 
 # Load DSM and DTM
-dsm_drone <- rast("D:/Thesis Thomas/DHT/DEM update/m_geclipt_DEM Dilsen 1.tif")
-dtm <- rast("S:/Vlaanderen/Hoogte/DHMVII/DHMVIIDTMRAS1m.tif")
+dsm_drone <- rast("E:/Thesis Thomas/DHT/DEM update/m_geclipt_DEM Dilsen 1.tif")
+dtm <- rast("Z:/Vlaanderen/Hoogte/DHMVII/DHMVIIDTMRAS1m.tif")
 
 ``` 
 

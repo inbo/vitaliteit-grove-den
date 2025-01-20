@@ -1,0 +1,124 @@
+---
+title: "calibration winFun"
+author: "Stien Heremans"
+date: "2025-01-20"
+output: html_document
+---
+
+```{r}
+library(sf)       # For spatial vector data
+library(raster)   # For CHM (raster data)
+
+crowns <- st_read("../data/Kruinen referentie/kruinen_Dilsen1.shp")
+chm <- raster("../output/CHM/chm_rescaled Dilsen 1.tif")
+
+crowns <- st_transform(crowns, crs = crs(chm))
+```
+
+```{r}
+library(exactextractr)  # For extracting raster values by polygons
+
+crowns$area <- st_area(crowns)
+crowns$radius <- sqrt(as.numeric(crowns$area) / pi)
+crowns$height_75 <- exact_extract(chm, crowns, function(values, coverage_fraction) {
+  quantile(values, probs = 0.75, na.rm = TRUE)
+})
+crowns$max_height <- exact_extract(chm, crowns, function(values, coverage_fraction) {
+  max(values, na.rm = TRUE)
+})
+crowns$average_height <- exact_extract(chm, crowns, function(values, coverage_fraction) {
+  mean(values, na.rm = TRUE)
+})
+
+```
+
+
+```{r}
+head(crowns)
+```
+```{r}
+# Remove rows with missing values
+crowns <- crowns[!is.na(crowns$radius) & !is.na(crowns$height_75), ]
+```
+
+
+```{r}
+library(ggplot2)
+
+p1 <- ggplot(crowns, aes(x = height_75, y = radius)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  theme_minimal() +
+  labs(title = "Radius vs Height",
+       x = "Crown Height (75th Percentile)",
+       y = "Crown Radius (m)")
+p1
+```
+
+```{r}
+
+# Fit the model
+model_75height <- lm(radius ~ height_75, data = crowns)
+
+# Summarize the model
+summary(model_75height)
+```
+
+
+```{r}
+# Remove rows with missing values
+crowns <- crowns[!is.na(crowns$radius) & !is.na(crowns$max_height), ]
+```
+
+
+```{r}
+library(ggplot2)
+
+p1 <- ggplot(crowns, aes(x = max_height, y = radius)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  theme_minimal() +
+  labs(title = "Radius vs Height",
+       x = "Crown Height (max)",
+       y = "Crown Radius (m)")
+p1
+```
+
+```{r}
+
+# Fit the model
+model_maxheight <- lm(radius ~ max_height, data = crowns)
+
+# Summarize the model
+summary(model_maxheight)
+```
+
+
+
+```{r}
+# Remove rows with missing values
+crowns <- crowns[!is.na(crowns$radius) & !is.na(crowns$average_height), ]
+```
+
+
+```{r}
+library(ggplot2)
+
+p1 <- ggplot(crowns, aes(x = average_height, y = radius)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  theme_minimal() +
+  labs(title = "Radius vs Height",
+       x = "Crown Height (average)",
+       y = "Crown Radius (m)")
+p1
+```
+
+```{r}
+
+# Fit the model
+model_75height <- lm(radius ~ average_height, data = crowns)
+
+# Summarize the model
+summary(model_75height)
+```
