@@ -100,9 +100,9 @@ ttops_sf <- st_as_sf(tree_tops)
 st_write(ttops_sf, file.path(output_dir, "tree_tops", "tree_tops Dilsen 1 v1.shp"), delete_layer = TRUE)  # Set 'delete_layer' to overwrite if needed
 
 # Plot tree tops
-plot.new()  # Ensure a new plot device
-plot(chm_raster, main = "Tree Tops")
-plot(tree_tops, add = TRUE, col = "red", pch = 20)
+#plot.new()  # Ensure a new plot device
+#plot(chm_raster, main = "Tree Tops")
+#plot(tree_tops, add = TRUE, col = "red", pch = 20)
 
 ```
 
