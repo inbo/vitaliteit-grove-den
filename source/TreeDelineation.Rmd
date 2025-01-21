@@ -1,152 +1,105 @@
 ---
-title: "calibration winFun"
-author: "Stien Heremans"
-date: "2025-01-20"
-output: html_document
+title: "Bomen delineatie"
+output: html_notebook
 ---
+```{r}
+library(terra) # For raster processing
+
+# Define file paths
+output_dir <- "../output"
+
+# Ensure output directories exist
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "DTM"))) {
+  dir.create(file.path(output_dir, "DTM"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "DSM"))) {
+  dir.create(file.path(output_dir, "DSM"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "CHM"))) {
+  dir.create(file.path(output_dir, "CHM"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "tree_tops"))) {
+  dir.create(file.path(output_dir, "tree_tops"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "tree_crowns"))) {
+  dir.create(file.path(output_dir, "tree_crowns"), recursive = TRUE)
+}
+
+
+# Load DSM and DTM
+dsm_drone <- rast("D:/Thesis Thomas/DHT/DEM update/m_geclipt_DEM Dilsen 1.tif")
+dtm <- rast("S:/Vlaanderen/Hoogte/DHMVII/DHMVIIDTMRAS1m.tif")
+
+``` 
 
 ```{r}
-library(sf)       # For spatial vector data
-library(raster)   # For CHM (raster data)
+# Reproject DSM to match the DTM's CRS
+dsm_reprojected <- project(dsm_drone, crs(dtm), method = "cubic")
 
-crowns <- st_read("../data/Kruinen referentie/kruinen_Dilsen1.shp")
-chm <- raster("../output/CHM/chm_rescaled Dilsen 1.tif")
+# Check if CRS match
+dsm_crs <- crs(dsm_reprojected)
+dtm_crs <- crs(dtm)
+if (!identical(dsm_crs, dtm_crs)) {
+  stop("CRS mismatch: DSM and DTM CRS do not match after reprojection.")
+}
 
-crowns <- st_transform(crowns, crs = crs(chm))
+# Save the reprojected DSM
+writeRaster(dsm_reprojected, file.path(output_dir, "DSM", "dsm Dilsen 1.tif"), overwrite = TRUE)
 ```
 
 ```{r}
-library(exactextractr)  # For extracting raster values by polygons
+# Clip DTM to DSM extent
+dtm_clipped <- crop(dtm, dsm_reprojected)
 
-crowns$area <- st_area(crowns)
-crowns$radius <- sqrt(as.numeric(crowns$area) / pi)
-crowns$height_75 <- exact_extract(chm, crowns, function(values, coverage_fraction) {
-  quantile(values, probs = 0.75, na.rm = TRUE)
-})
-crowns$max_height <- exact_extract(chm, crowns, function(values, coverage_fraction) {
-  max(values, na.rm = TRUE)
-})
-crowns$average_height <- exact_extract(chm, crowns, function(values, coverage_fraction) {
-  mean(values, na.rm = TRUE)
-})
+# Resample DTM to match DSM resolution
+dtm_resampled <- resample(dtm_clipped, dsm_reprojected, method = "cubic")
 
-```
-
-
-```{r}
-head(crowns)
-```
-```{r}
-# Remove rows with missing values
-crowns <- crowns[!is.na(crowns$radius) & !is.na(crowns$height_75), ]
-```
-
-
-```{r}
-library(ggplot2)
-
-p1 <- ggplot(crowns, aes(x = height_75, y = radius)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, color = "blue") +
-  theme_minimal() +
-  labs(title = "Radius vs Height",
-       x = "Crown Height (75th Percentile)",
-       y = "Crown Radius (m)")
-p1
+# Save the clipped and resampled DTM
+writeRaster(dtm_resampled, file.path(output_dir, "DTM", "dtm Dilsen 1.tif"), overwrite = TRUE)
 ```
 
 ```{r}
+# CHM calculation
+chm <- dsm_reprojected - dtm_resampled
 
-# Fit the model
-model_75height <- lm(radius ~ height_75, data = crowns)
-
-# Summarize the model
-summary(model_75height)
-```
-
-
-```{r}
-# Remove rows with missing values
-crowns <- crowns[!is.na(crowns$radius) & !is.na(crowns$max_height), ]
-```
-
-
-```{r}
-library(ggplot2)
-
-p1 <- ggplot(crowns, aes(x = max_height, y = radius)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, color = "blue") +
-  theme_minimal() +
-  labs(title = "Radius vs Height",
-       x = "Crown Height (max)",
-       y = "Crown Radius (m)")
-p1
 ```
 
 ```{r}
+# Calculate the 1st percentile
+p1 <- quantile(values(chm), probs = 0.01, na.rm = TRUE)
+print(p1)  # Display the 1st percentile value
 
-# Fit the model
-model_maxheight <- lm(radius ~ max_height, data = crowns)
+# Rescale by subtracting the 1st percentile
+chm_rescaled <- chm - p1
 
-# Summarize the model
-summary(model_maxheight)
-```
+# Set all values lower than 0 to 0
+chm_rescaled[chm_rescaled < 0] <- 0
 
-
-
-```{r}
-# Remove rows with missing values
-crowns <- crowns[!is.na(crowns$radius) & !is.na(crowns$average_height), ]
-```
-
-
-```{r}
-library(ggplot2)
-
-p1 <- ggplot(crowns, aes(x = average_height, y = radius)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, color = "blue") +
-  theme_minimal() +
-  labs(title = "Radius vs Height",
-       x = "Crown Height (average)",
-       y = "Crown Radius (m)")
-p1
+# Save the rescaled CHM
+writeRaster(chm_rescaled, file.path(output_dir, "CHM", "chm_rescaled Dilsen 1.tif"), overwrite = TRUE)
 ```
 
 ```{r}
+library(ForestTools)
+library(raster)
 
-# Fit the model
-model_75height <- lm(radius ~ average_height, data = crowns)
+chm_raster <- raster(chm_rescaled)
+# Detect tree tops
+tree_tops <- vwf(CHM = chm_raster, winFun = function(x) 0.1 * x + 1, minHeight = 4)
 
-# Summarize the model
-summary(model_75height)
-```
+# Save tree tops
+library(sf)
 
+  # Convert SpatialPointsDataFrame to sf object
+ttops_sf <- st_as_sf(tree_tops)
 
-```{r}
+  # Export as shapefile
+st_write(ttops_sf, file.path(output_dir, "tree_tops", "tree_tops Dilsen 1 v1.shp"), delete_layer = TRUE)  # Set 'delete_layer' to overwrite if needed
 
-# Create a histogram of the radius
-hist(crowns$radius,
-     breaks = 20,                     # Number of bins
-     col = "skyblue",                 # Color of the bars
-     border = "black",                # Color of the bar borders
-     main = "Histogram of Crown Radius",  # Title
-     xlab = "Radius (m)",             # X-axis label
-     ylab = "Frequency",              # Y-axis label
-     cex.main = 1.5,                  # Size of the title
-     cex.lab = 1.2,                   # Size of axis labels
-     cex.axis = 1)                    # Size of axis text
-
-# Optional: Add grid lines
-grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
-```
-
-
-```{r}
-# Calculate the average radius
-average_radius <- mean(crowns$radius, na.rm = TRUE)
-
-# Print the result
-print(paste("The average radius is:", round(average_radius, 2), "meters"))
-```
+# Plot tree tops
+#plot.new()  # Ensure a new plot device
+#plot(chm_raster, main = "Tree Tops")
+#plot(tree_tops, add = TRUE, col = "red", pch = 20)
