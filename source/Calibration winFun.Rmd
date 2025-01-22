@@ -122,31 +122,3 @@ model_75height <- lm(radius ~ average_height, data = crowns)
 # Summarize the model
 summary(model_75height)
 ```
-
-
-```{r}
-
-# Create a histogram of the radius
-hist(crowns$radius,
-     breaks = 20,                     # Number of bins
-     col = "skyblue",                 # Color of the bars
-     border = "black",                # Color of the bar borders
-     main = "Histogram of Crown Radius",  # Title
-     xlab = "Radius (m)",             # X-axis label
-     ylab = "Frequency",              # Y-axis label
-     cex.main = 1.5,                  # Size of the title
-     cex.lab = 1.2,                   # Size of axis labels
-     cex.axis = 1)                    # Size of axis text
-
-# Optional: Add grid lines
-grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
-```
-
-
-```{r}
-# Calculate the average radius
-average_radius <- mean(crowns$radius, na.rm = TRUE)
-
-# Print the result
-print(paste("The average radius is:", round(average_radius, 2), "meters"))
-```
