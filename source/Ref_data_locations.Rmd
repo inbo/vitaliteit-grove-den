@@ -1,0 +1,66 @@
+---
+title: "Create random reference points"
+author: "Stien Heremans"
+date: "2025-01-23"
+output: html_document
+---
+```{r}
+getwd()
+```
+
+```{r}
+library(terra)
+library(sf)
+
+# Define paths
+chm_folder <- "../output/CHM"
+output_folder <- "../output/random_points"
+
+# Create output folder if it doesn't exist
+if (!dir.exists(output_folder)) {
+  dir.create(output_folder, recursive = TRUE)
+}
+
+# Function to generate random points
+generate_random_points <- function(chm_path, output_path, num_points = 100) {
+  # Load the CHM raster
+  chm <- rast(chm_path)
+  
+  # Create a mask for CHM > 3 meters
+  mask <- chm > 3
+  
+  # Get valid cell indices
+  valid_cells <- which(mask[])  # Use mask[] to get logical values as a vector
+  
+  if (length(valid_cells) < num_points) {
+    warning(sprintf("Fewer valid points (%d) in %s than requested (%d).", length(valid_cells), chm_path, num_points))
+    num_points <- length(valid_cells)
+  }
+  
+  # Randomly sample valid cells
+  sampled_cells <- sample(valid_cells, num_points)
+  sampled_coords <- xyFromCell(chm, sampled_cells)  # Convert cell indices to coordinates
+  
+  # Create an sf object for the points
+  points_sf <- st_as_sf(
+    data.frame(id = 1:length(sampled_coords[, 1])),  # Ensure correct row count for sf object
+    coords = data.frame(x = sampled_coords[, 1], y = sampled_coords[, 2]),  # Explicitly define x and y columns
+    crs = crs(chm)
+  )
+  
+  # Save points to shapefile
+  st_write(points_sf, output_path, delete_layer = TRUE)
+  
+  # Print success message
+  message(sprintf("Random points saved to %s", output_path))
+}
+
+# Loop through CHM files
+chm_files <- list.files(chm_folder, pattern = "\\.tif$", full.names = TRUE)
+for (chm_file in chm_files) {
+  plot_name <- gsub("chm_rescaled_|\\.tif$", "", basename(chm_file))
+  output_path <- file.path(output_folder, paste0("random_points_", plot_name, ".shp"))
+  generate_random_points(chm_file, output_path, num_points = 100)
+}
+```
+
