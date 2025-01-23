@@ -30,8 +30,15 @@ generate_random_points <- function(chm_path, output_path, num_points = 100) {
   mask <- chm > 3
   
   # Get valid cell indices
-  valid_cells <- which(mask[])  # Use mask[] to get logical values as a vector
+  valid_cells <- which(mask[])  # Logical values as a vector
   
+  # Debug: Inspect valid_cells
+  print(sprintf("Number of valid cells: %d", length(valid_cells)))
+  if (length(valid_cells) == 0) {
+    stop(sprintf("No valid cells found in %s where CHM > 3.", chm_path))
+  }
+  
+  # Adjust num_points if necessary
   if (length(valid_cells) < num_points) {
     warning(sprintf("Fewer valid points (%d) in %s than requested (%d).", length(valid_cells), chm_path, num_points))
     num_points <- length(valid_cells)
@@ -39,13 +46,33 @@ generate_random_points <- function(chm_path, output_path, num_points = 100) {
   
   # Randomly sample valid cells
   sampled_cells <- sample(valid_cells, num_points)
-  sampled_coords <- xyFromCell(chm, sampled_cells)  # Convert cell indices to coordinates
   
-  # Create an sf object for the points
+  # Debug: Inspect sampled_cells
+  print("Sampled cells:")
+  print(sampled_cells)
+  
+  # Convert sampled cells to geographic coordinates
+  sampled_coords <- xyFromCell(chm, sampled_cells)
+  
+  # Debug: Inspect sampled_coords
+  print("Sampled coordinates:")
+  print(sampled_coords)
+  print(sprintf("Class of sampled_coords: %s", class(sampled_coords)))
+  
+  # Ensure sampled_coords is a matrix
+  if (!is.matrix(sampled_coords)) {
+    stop("Sampled coordinates are not a matrix. Please check the input raster and sampled cells.")
+  }
+  
+# Create an sf object for the points
   points_sf <- st_as_sf(
-    data.frame(id = 1:length(sampled_coords[, 1])),  # Ensure correct row count for sf object
-    coords = data.frame(x = sampled_coords[, 1], y = sampled_coords[, 2]),  # Explicitly define x and y columns
-    crs = crs(chm)
+    data.frame(
+      id = 1:nrow(sampled_coords),               # Correct ID creation
+      x = sampled_coords[, 1],                  # Explicit x coordinates
+      y = sampled_coords[, 2]                   # Explicit y coordinates
+    ),
+    coords = c("x", "y"),                        # Define coordinate columns
+    crs = crs(chm)                               # Set coordinate reference system
   )
   
   # Save points to shapefile
@@ -54,6 +81,7 @@ generate_random_points <- function(chm_path, output_path, num_points = 100) {
   # Print success message
   message(sprintf("Random points saved to %s", output_path))
 }
+
 
 # Loop through CHM files
 chm_files <- list.files(chm_folder, pattern = "\\.tif$", full.names = TRUE)
