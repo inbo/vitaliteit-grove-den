@@ -88,7 +88,8 @@ library(raster)
 
 chm_raster <- raster(chm_rescaled)
 # Detect tree tops
-tree_tops <- vwf(CHM = chm_raster, winFun = function(x) 0.1 * x + 1, minHeight = 4)
+tree_tops <- vwf(CHM = chm_raster, winFun = function(x) 0 * x + 3.17, minHeight = 4)
+  # the value of 3.17 was taken from 'Calibration winFun.Rmd
 
 # Save tree tops
 library(sf)
@@ -97,12 +98,44 @@ library(sf)
 ttops_sf <- st_as_sf(tree_tops)
 
   # Export as shapefile
-st_write(ttops_sf, file.path(output_dir, "tree_tops", "tree_tops Dilsen 1 v1.shp"), delete_layer = TRUE)  # Set 'delete_layer' to overwrite if needed
+st_write(ttops_sf, file.path(output_dir, "tree_tops", "tree_tops Dilsen 1 opt.shp"), delete_layer = TRUE)  # Set 'delete_layer' to overwrite if needed
 
 # Plot tree tops
 #plot.new()  # Ensure a new plot device
 #plot(chm_raster, main = "Tree Tops")
 #plot(tree_tops, add = TRUE, col = "red", pch = 20)
 
+```
+
+```{r}
+#ONLY IF STARTING FROM EXISTING TREE TOPS
+shapefile_path <- file.path(output_dir, "tree_tops", "tree_tops Dilsen 1 opt.shp")
+
+library(sf)
+library(ForestTools)
+library(raster)
+
+# Define the path to the CHM file
+chm_path <- file.path(output_dir, "CHM", "chm_rescaled Dilsen 1.tif")
+
+# Read the CHM raster
+chm_rescaled <- raster(chm_path)
+
+# Read the shapefile
+tree_tops <- st_read(shapefile_path)
+```
+
+```{r}
+# Apply MCWS to generate tree crowns
+tree_crowns <- mcws(treetops = tree_tops, CHM = chm_rescaled, minHeight = 4)
+
+library(terra)
+
+# Convert the raster to polygons
+tree_crowns_poly <- as.polygons(tree_crowns)
+
+# Convert to sf object and save as shapefile
+tree_crowns_sf <- st_as_sf(tree_crowns_poly)
+st_write(tree_crowns_sf, file.path(output_dir, "tree_crowns", "tree_crowns.shp"), delete_layer = TRUE)
 ```
 
