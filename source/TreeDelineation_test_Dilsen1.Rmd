@@ -1,0 +1,140 @@
+---
+title: "Bomen delineatie"
+output: html_notebook
+---
+```{r}
+library(terra) # For raster processing
+
+# Define file paths
+output_dir <- "../output"
+
+# Ensure output directories exist
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "DTM"))) {
+  dir.create(file.path(output_dir, "DTM"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "DSM"))) {
+  dir.create(file.path(output_dir, "DSM"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "CHM"))) {
+  dir.create(file.path(output_dir, "CHM"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "tree_tops"))) {
+  dir.create(file.path(output_dir, "tree_tops"), recursive = TRUE)
+}
+if (!dir.exists(file.path(output_dir, "tree_crowns"))) {
+  dir.create(file.path(output_dir, "tree_crowns"), recursive = TRUE)
+}
+
+# Load DSM and DTM
+dsm_drone <- rast("E:/Thesis Thomas/DHT/DEM update/m_geclipt_DEM Dilsen 1.tif")
+dtm <- rast("Z:/Vlaanderen/Hoogte/DHMVII/DHMVIIDTMRAS1m.tif")
+
+``` 
+
+```{r}
+# Reproject DSM to match the DTM's CRS
+dsm_reprojected <- project(dsm_drone, crs(dtm), method = "cubic")
+
+# Check if CRS match
+dsm_crs <- crs(dsm_reprojected)
+dtm_crs <- crs(dtm)
+if (!identical(dsm_crs, dtm_crs)) {
+  stop("CRS mismatch: DSM and DTM CRS do not match after reprojection.")
+}
+
+# Save the reprojected DSM
+writeRaster(dsm_reprojected, file.path(output_dir, "DSM", "dsm Dilsen 1.tif"), overwrite = TRUE)
+```
+
+```{r}
+# Clip DTM to DSM extent
+dtm_clipped <- crop(dtm, dsm_reprojected)
+
+# Resample DTM to match DSM resolution
+dtm_resampled <- resample(dtm_clipped, dsm_reprojected, method = "cubic")
+
+# Save the clipped and resampled DTM
+writeRaster(dtm_resampled, file.path(output_dir, "DTM", "dtm Dilsen 1.tif"), overwrite = TRUE)
+```
+
+```{r}
+# CHM calculation
+chm <- dsm_reprojected - dtm_resampled
+
+```
+
+```{r}
+# Calculate the 1st percentile
+p1 <- quantile(values(chm), probs = 0.01, na.rm = TRUE)
+print(p1)  # Display the 1st percentile value
+
+# Rescale by subtracting the 1st percentile
+chm_rescaled <- chm - p1
+
+# Set all values lower than 0 to 0
+chm_rescaled[chm_rescaled < 0] <- 0
+
+# Save the rescaled CHM
+writeRaster(chm_rescaled, file.path(output_dir, "CHM", "chm_rescaled Dilsen 1.tif"), overwrite = TRUE)
+```
+
+```{r}
+library(ForestTools)
+library(raster)
+
+chm_raster <- raster(chm_rescaled)
+# Detect tree tops
+tree_tops <- vwf(CHM = chm_raster, winFun = function(x) 0 * x + 3.17, minHeight = 4)
+  # the value of 3.17 was taken from 'Calibration winFun.Rmd
+
+# Save tree tops
+library(sf)
+
+  # Convert SpatialPointsDataFrame to sf object
+ttops_sf <- st_as_sf(tree_tops)
+
+  # Export as shapefile
+st_write(ttops_sf, file.path(output_dir, "tree_tops", "tree_tops Dilsen 1 opt.shp"), delete_layer = TRUE)  # Set 'delete_layer' to overwrite if needed
+
+# Plot tree tops
+#plot.new()  # Ensure a new plot device
+#plot(chm_raster, main = "Tree Tops")
+#plot(tree_tops, add = TRUE, col = "red", pch = 20)
+
+```
+
+```{r}
+#ONLY IF STARTING FROM EXISTING TREE TOPS
+shapefile_path <- file.path(output_dir, "tree_tops", "tree_tops Dilsen 1 opt.shp")
+
+library(sf)
+library(ForestTools)
+library(raster)
+
+# Define the path to the CHM file
+chm_path <- file.path(output_dir, "CHM", "chm_rescaled Dilsen 1.tif")
+
+# Read the CHM raster
+chm_rescaled <- raster(chm_path)
+
+# Read the shapefile
+tree_tops <- st_read(shapefile_path)
+```
+
+```{r}
+# Apply MCWS to generate tree crowns
+tree_crowns <- mcws(treetops = tree_tops, CHM = chm_rescaled, minHeight = 4)
+
+library(terra)
+
+# Convert the raster to polygons
+tree_crowns_poly <- as.polygons(tree_crowns)
+
+# Convert to sf object and save as shapefile
+tree_crowns_sf <- st_as_sf(tree_crowns_poly)
+st_write(tree_crowns_sf, file.path(output_dir, "tree_crowns", "tree_crowns.shp"), delete_layer = TRUE)
+```
+
