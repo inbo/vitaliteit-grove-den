@@ -1,94 +1,85 @@
 ---
-title: "Create random reference points"
+title: "Create random tiles to collect vitality scores"
 author: "Stien Heremans"
 date: "2025-01-23"
 output: html_document
 ---
 ```{r}
-getwd()
-```
-
-```{r}
-library(terra)
 library(sf)
+library(dplyr)
 
-# Define paths
-chm_folder <- "../output/CHM"
-output_folder <- "../output/random_points"
+# Load the shapefile with plot outlines
+plot_outlines <- st_read("../data/plots_geojson")
 
-# Create output folder if it doesn't exist
-if (!dir.exists(output_folder)) {
-  dir.create(output_folder, recursive = TRUE)
+# Ensure the "naam" attribute exists and is valid for file names
+plot_outlines <- plot_outlines %>%
+  mutate(naam = make.names(naam, unique = TRUE)) # Ensures valid file names
+
+
+# Function to create a grid for a single non-rectangular plot
+create_clipped_grid <- function(plot, n_tiles = 120) {
+  n_cols <- sqrt(n_tiles) # Number of columns (e.g., 10x10 grid)
+  n_rows <- sqrt(n_tiles) # Number of rows
+  
+  # Get the extent of the plot
+  bbox <- st_bbox(plot)
+  xmin <- bbox["xmin"]
+  ymin <- bbox["ymin"]
+  xmax <- bbox["xmax"]
+  ymax <- bbox["ymax"]
+  
+  # Create grid breaks
+  x_breaks <- seq(xmin, xmax, length.out = n_cols + 1)
+  y_breaks <- seq(ymin, ymax, length.out = n_rows + 1)
+  
+  # Generate a grid of rectangular polygons
+  grid <- expand.grid(x = x_breaks[-length(x_breaks)], y = y_breaks[-length(y_breaks)])
+  tiles <- mapply(function(x, y) {
+    st_polygon(list(matrix(c(
+      x, y,
+      x + (xmax - xmin) / n_cols, y,
+      x + (xmax - xmin) / n_cols, y + (ymax - ymin) / n_rows,
+      x, y + (ymax - ymin) / n_rows,
+      x, y
+    ), ncol = 2, byrow = TRUE)))
+  }, grid$x, grid$y, SIMPLIFY = FALSE)
+  
+  # Convert to an sf object
+  tile_sf <- st_sf(geometry = st_sfc(tiles), crs = st_crs(plot))
+  
+  # Clip the grid to the non-rectangular plot boundary
+  tile_sf_clipped <- st_intersection(tile_sf, plot)
+  
+  # Add an ID column for each grid cell
+  tile_sf_clipped <- tile_sf_clipped %>%
+    mutate(tile_id = row_number())
+  
+  return(tile_sf_clipped)
 }
 
-# Function to generate random points
-generate_random_points <- function(chm_path, output_path, num_points = 100) {
-  # Load the CHM raster
-  chm <- rast(chm_path)
-  
-  # Create a mask for CHM > 3 meters
-  mask <- chm > 3
-  
-  # Get valid cell indices
-  valid_cells <- which(mask[])  # Logical values as a vector
-  
-  # Debug: Inspect valid_cells
-  print(sprintf("Number of valid cells: %d", length(valid_cells)))
-  if (length(valid_cells) == 0) {
-    stop(sprintf("No valid cells found in %s where CHM > 3.", chm_path))
-  }
-  
-  # Adjust num_points if necessary
-  if (length(valid_cells) < num_points) {
-    warning(sprintf("Fewer valid points (%d) in %s than requested (%d).", length(valid_cells), chm_path, num_points))
-    num_points <- length(valid_cells)
-  }
-  
-  # Randomly sample valid cells
-  sampled_cells <- sample(valid_cells, num_points)
-  
-  # Debug: Inspect sampled_cells
-  print("Sampled cells:")
-  print(sampled_cells)
-  
-  # Convert sampled cells to geographic coordinates
-  sampled_coords <- xyFromCell(chm, sampled_cells)
-  
-  # Debug: Inspect sampled_coords
-  print("Sampled coordinates:")
-  print(sampled_coords)
-  print(sprintf("Class of sampled_coords: %s", class(sampled_coords)))
-  
-  # Ensure sampled_coords is a matrix
-  if (!is.matrix(sampled_coords)) {
-    stop("Sampled coordinates are not a matrix. Please check the input raster and sampled cells.")
-  }
-  
-# Create an sf object for the points
-  points_sf <- st_as_sf(
-    data.frame(
-      id = 1:nrow(sampled_coords),               # Correct ID creation
-      x = sampled_coords[, 1],                  # Explicit x coordinates
-      y = sampled_coords[, 2]                   # Explicit y coordinates
-    ),
-    coords = c("x", "y"),                        # Define coordinate columns
-    crs = crs(chm)                               # Set coordinate reference system
-  )
-  
-  # Save points to shapefile
-  st_write(points_sf, output_path, delete_layer = TRUE)
-  
-  # Print success message
-  message(sprintf("Random points saved to %s", output_path))
-}
+# Create and save separate grids for each plot
+grid_output_directory  <- "../output/grid_ref"
+dir.create(grid_output_directory, showWarnings = FALSE)
 
+# Create and save an empty points shapefile for each plot
+point_output_directory  <- "../data/Vitaliteit referentie"
+dir.create(point_output_directory, showWarnings = FALSE)
 
-# Loop through CHM files
-chm_files <- list.files(chm_folder, pattern = "\\.tif$", full.names = TRUE)
-for (chm_file in chm_files) {
-  plot_name <- gsub("chm_rescaled_|\\.tif$", "", basename(chm_file))
-  output_path <- file.path(output_folder, paste0("random_points_", plot_name, ".shp"))
-  generate_random_points(chm_file, output_path, num_points = 100)
+for (i in 1:nrow(plot_outlines)) {
+  plot <- plot_outlines[i, ]
+  plot_name <- plot$naam # Use the "naam" attribute
+  
+  # Create and save grid shapefile
+  grid <- create_clipped_grid(plot)
+  grid_file <- file.path(grid_output_directory, paste0("grid_", plot_name, ".shp"))
+  st_write(grid, grid_file, delete_layer = TRUE)
+  
+
+  # Create and save a point shapefile with a single point at the center of the plot
+  center <- st_centroid(st_geometry(plot)) # Calculate the centroid of the plot's geometry
+  point_sf <- st_sf(vitality = 0, geometry = center, crs = st_crs(plot)) # Add vitality field (default: 0)
+  point_file <- file.path(point_output_directory, paste0("points_", plot_name, ".shp"))
+  st_write(point_sf, point_file, delete_layer = TRUE)
 }
 ```
 
