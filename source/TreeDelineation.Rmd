@@ -3,7 +3,7 @@ title: "Bomen delineatie"
 output: html_notebook
 ---
 ```{r}
-library(terra) # For raster processing
+library(terra) 
 
 # Define file paths
 input_dir <- "E:/Thesis Thomas/DHT/DEM update/"
@@ -40,19 +40,27 @@ drone_files <- list.files(input_dir, pattern = "\\.tif$", full.names = TRUE)
 ```
 
 ```{r}
+# Load required libraries
+library(terra)
+library(sf)
+
 # Process each drone raster
 for (drone_file in drone_files) {
   cat("Processing:", drone_file, "\n")
   
   tryCatch({
+    # Extract the relevant file name after "DEM"
+    file_name <- sub(".*DEM\\s*", "", basename(drone_file))
+    
     # Load the DSM raster
     dsm_drone <- rast(drone_file)
+    
     
     # Reproject DSM to match DTM CRS
     dsm_reprojected <- project(dsm_drone, crs(dtm), method = "cubic")
     
     # Save the reprojected DSM
-    dsm_output_path <- file.path(output_dir, "DSM", paste0("dsm_", basename(drone_file)))
+    dsm_output_path <- file.path(output_dir, "DSM", paste0("dsm_", file_name))
     writeRaster(dsm_reprojected, dsm_output_path, overwrite = TRUE)
     
     # Clip and resample DTM
@@ -60,7 +68,7 @@ for (drone_file in drone_files) {
     dtm_resampled <- resample(dtm_clipped, dsm_reprojected, method = "cubic")
     
     # Save the processed DTM
-    dtm_output_path <- file.path(output_dir, "DTM", paste0("dtm_", basename(drone_file)))
+    dtm_output_path <- file.path(output_dir, "DTM", paste0("dtm_", file_name))
     writeRaster(dtm_resampled, dtm_output_path, overwrite = TRUE)
     
     # Calculate CHM
@@ -72,31 +80,67 @@ for (drone_file in drone_files) {
     chm_rescaled[chm_rescaled < 0] <- 0
     
     # Save the rescaled CHM
-    chm_output_path <- file.path(output_dir, "CHM", paste0("chm_rescaled_", basename(drone_file)))
+    chm_output_path <- file.path(output_dir, "CHM", paste0("chm_rescaled_", file_name))
     writeRaster(chm_rescaled, chm_output_path, overwrite = TRUE)
     
+    
+    
+    cat("Completed processing part 1:", file_name, "\n")
+    
+  }, error = function(e) {
+    cat("Error processing file:", file_name, "\n", e$message, "\n")
+  })
+}
+```
+
+```{r}
+# Load required libraries
+library(terra)
+library(ForestTools)
+library(sf)
+library(raster)  # For compatibility with ForestTools
+
+# Define input and output directories
+chm_dir <- "E:/Thesis Thomas/Processed_Data/CHM/"
+output_dir <- "E:/Thesis Thomas/Processed_Data/"
+dir.create(file.path(output_dir, "tree_tops"), showWarnings = FALSE)
+dir.create(file.path(output_dir, "tree_crowns"), showWarnings = FALSE)
+
+# List all CHM files
+chm_files <- list.files(chm_dir, pattern = "\\.tif$", full.names = TRUE)
+
+# Process each CHM raster
+for (chm_file in chm_files) {
+  cat("Processing tree tops and crowns for:", chm_file, "\n")
+  
+  tryCatch({
+    # Extract the relevant file name after "chm_rescaled_"
+    file_name <- sub("chm_rescaled_", "", basename(chm_file))
+    
+    # Load the CHM raster
+    chm_rescaled <- raster(chm_file)  # Convert to raster for ForestTools compatibility
+    
     # Detect tree tops
-    chm_raster <- raster(chm_rescaled)
-    tree_tops <- vwf(CHM = chm_raster, winFun = function(x) 0 * x + 3.17, minHeight = 4)
+    tree_tops <- vwf(CHM = chm_rescaled, winFun = function(x) 0 * x + 3.17, minHeight = 7)
     
     # Save tree tops as shapefile
     ttops_sf <- st_as_sf(tree_tops)
-    ttops_output_path <- file.path(output_dir, "tree_tops", paste0("tree_tops_", tools::file_path_sans_ext(basename(drone_file)), ".shp"))
+    ttops_output_path <- file.path(output_dir, "tree_tops", paste0("tree_tops_", file_name, ".shp"))
     st_write(ttops_sf, ttops_output_path, delete_layer = TRUE)
     
     # Apply MCWS for tree crowns
-    tree_crowns <- mcws(treetops = tree_tops, CHM = chm_raster, minHeight = 4)
+    tree_crowns <- mcws(treetops = tree_tops, CHM = chm_rescaled, minHeight = 7)
     tree_crowns_poly <- as.polygons(tree_crowns)
     tree_crowns_sf <- st_as_sf(tree_crowns_poly)
     
     # Save tree crowns as shapefile
-    tree_crowns_output_path <- file.path(output_dir, "tree_crowns", paste0("tree_crowns_", tools::file_path_sans_ext(basename(drone_file)), ".shp"))
+    tree_crowns_output_path <- file.path(output_dir, "tree_crowns", paste0("tree_crowns_", file_name, ".shp"))
     st_write(tree_crowns_sf, tree_crowns_output_path, delete_layer = TRUE)
     
-    cat("Completed processing:", drone_file, "\n")
+    cat("Completed tree tops and crowns for:", file_name, "\n")
     
   }, error = function(e) {
-    cat("Error processing file:", drone_file, "\n", e$message, "\n")
+    cat("Error processing CHM file:", file_name, "\n", e$message, "\n")
   })
 }
 ```
