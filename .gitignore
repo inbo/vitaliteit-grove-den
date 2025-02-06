@@ -21,3 +21,4 @@ libs
 output
 renv/library
 sync.ffs_db
+data/
