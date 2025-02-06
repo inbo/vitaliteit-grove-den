@@ -61,9 +61,9 @@ create_clipped_grid <- function(plot, n_tiles = 120) {
 grid_output_directory  <- "../output/grid_ref"
 dir.create(grid_output_directory, showWarnings = FALSE)
 
-# Create and save an empty points shapefile for each plot
-point_output_directory  <- "../data/Vitaliteit referentie"
-dir.create(point_output_directory, showWarnings = FALSE)
+# Create and save an empty polygons shapefile for each plot
+poly_output_directory  <- "../data/Vitaliteit referentie"
+dir.create(poly_output_directory, showWarnings = FALSE)
 
 for (i in 1:nrow(plot_outlines)) {
   plot <- plot_outlines[i, ]
@@ -74,12 +74,32 @@ for (i in 1:nrow(plot_outlines)) {
   grid_file <- file.path(grid_output_directory, paste0("grid_", plot_name, ".shp"))
   st_write(grid, grid_file, delete_layer = TRUE)
   
-
-  # Create and save a point shapefile with a single point at the center of the plot
-  center <- st_centroid(st_geometry(plot)) # Calculate the centroid of the plot's geometry
-  point_sf <- st_sf(vitality = 0, geometry = center, crs = st_crs(plot)) # Add vitality field (default: 0)
-  point_file <- file.path(point_output_directory, paste0("points_", plot_name, ".shp"))
-  st_write(point_sf, point_file, delete_layer = TRUE)
+  
+  # Calculate the centroid of the plot
+  center <- st_centroid(st_geometry(plot))
+  
+  # Buffer the centroid to create a 1x1 meter square (half width = 0.5m)
+  small_polygon <- st_buffer(center, dist = 0.5) # Create a circular buffer
+  small_square <- st_make_grid(small_polygon, cellsize = 1)[1] # Crop to a single square
+  
+  # Define the "vital" attribute (example logic, can be adjusted)
+  vital <- ifelse(runif(1) > 0.5, "YES", "NO") # Randomly assigns YES or NO for demonstration
+  
+  # Create the small polygon feature with attributes
+  small_polygon_sf <- st_sf(
+    vital = vital,            # Add the "vital" field (binary YES/NO)
+    geometry = st_geometry(small_square), # Geometry of the 1x1 meter polygon
+    crs = st_crs(plot)        # Set the coordinate reference system to match the plot
+  )
+  
+  # Define the output file path with "ref_vit" in the name
+  small_polygon_file <- file.path(
+    poly_output_directory, 
+    paste0("ref_vit_", plot_name, ".shp")
+  )
+  
+  # Write the shapefile
+  st_write(small_polygon_sf, small_polygon_file, delete_layer = TRUE)
 }
 ```
 
