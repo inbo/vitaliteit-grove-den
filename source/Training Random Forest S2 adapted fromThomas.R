@@ -199,4 +199,3 @@ cat("Kappa:", round(kappa, 4), "\n")
 cat("Precision:", round(precision, 4), "\n")
 cat("Recall (Sensitivity):", round(recall, 4), "\n")
 cat("F1 Score:", round(f1_score, 4), "\n")
-

@@ -1,7 +1,3 @@
-###################### THOMAS D'HULSTER ########################
-############ random forest model Sentinel-2 data ###############
-################################################################
-
 # **(1) Load Required Libraries**
 packages <- c('dplyr', 'ggplot2', 'caret', 'tidyverse')
 
@@ -141,3 +137,35 @@ plot_index_histogram(data_indices, "NDVI", "histogram_NDVI.png")
 plot_index_histogram(data_indices, "NDRE", "histogram_NDRE.png")
 
 print("✅ NDVI & NDRE histograms saved successfully in 'output/sen2' at 600 DPI.")
+
+# **(7) Prepare Data for Line Plot with Shaded Area (IQR)**
+band_stats <- data_balanced %>%
+  pivot_longer(cols = c(B1, B2, B3, B4), names_to = "Band", values_to = "Reflectance") %>%
+  group_by(Band, vitklasse) %>%
+  summarise(
+    median = median(Reflectance),
+    p25 = quantile(Reflectance, 0.25),
+    p75 = quantile(Reflectance, 0.75),
+    .groups = "drop"
+  )
+
+# **(8) Generate Line Plot with Shaded Area**
+p <- ggplot(band_stats, aes(x = Band, y = median, group = vitklasse, color = vitklasse, fill = vitklasse)) +
+  geom_line(size = 1.2) +  # Median line
+  geom_ribbon(aes(ymin = p25, ymax = p75), alpha = 0.3, linetype = 0) +  # Shaded area (IQR)
+  labs(x = "Spectral bands", y = "Median reflectance (with IQR)", color = "Vitality Class", fill = "Vitality Class") +
+  scale_color_manual(values = c("lightsalmon4", "olivedrab4")) +
+  scale_fill_manual(values = c("lightsalmon4", "olivedrab4")) +
+  theme_bw(base_size = 18) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "top",
+    strip.background = element_blank(),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+ggsave(filename = file.path(output_folder, "lineplot_bands_vitality.png"), plot = p, width = 8
+       , height = 6, dpi = 600)
+
+print("✅ Line plot with shaded IQR saved successfully in 'output/planet' at 600 DPI.")
