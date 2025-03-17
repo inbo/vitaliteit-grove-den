@@ -110,4 +110,3 @@ for (drone_id in unique(matched_tiles$naam)) {
   cat("Saved merged raster for Drone ID:", drone_id, "to", output_file, "\n")
 }
 ```
-

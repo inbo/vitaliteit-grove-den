@@ -16,7 +16,7 @@ Research Institute for Nature and Forest (INBO)[^cph][^fnd]
 [^inbo.be]: Instituut voor Natuur- en Bosonderzoek (INBO)
 
 
-**keywords**: remote sensing; grove den; vitaliteit; drones; satellieten; orthofoto's'
+**keywords**: remote sensing; grove den; vitaliteit; drones; satellieten; orthofoto's
 
 <!-- community: inbo -->
 

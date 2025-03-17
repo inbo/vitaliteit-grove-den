@@ -5,11 +5,11 @@ library(dplyr)  # For data manipulation
 
 # 1. Define paths
 sentinel_folder <- "E:/2025_Bosvitaliteit/Code/vitaliteit-grove-den/data/Sentinel2/"
-output_folder <- "output/plots_Andries_Sen2_v2/"
+output_folder <- "output/plots_Andries_Sen2_v3/"
 raster_folder <- paste0(output_folder, "buffer_rasters/")
 shapefile_folder <- paste0(output_folder, "shapefiles/")
 boskartering_path <- "Z:/Vlaanderen/Natuur_Bos/Boskartering/bosvl2001.shp"
-plots_path <- "data/Andries plots/plots Andries 17feb2025.shp"  # Path to plot center shapefile
+plots_path <- "data/Andries plots/plots Andries 17feb2025_v2.shp"  # Path to plot center shapefile
 
 # Create directories if they don't exist
 dir.create(output_folder, showWarnings = FALSE, recursive = TRUE)

@@ -115,7 +115,3 @@ grid.arrange(
 ```
 
 
-# Step 2: Visualize actual drone images
-```{r visualize drone images}
-```
-
